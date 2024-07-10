@@ -125,7 +125,7 @@ const CoursesTable = () => {
         </>
       );
     },
-    [deleteCourse, toggleCourseCounted]
+    [deleteCourse, toggleCourseCounted,openEditModal]
   );
 
   const rows = useMemo(() => {

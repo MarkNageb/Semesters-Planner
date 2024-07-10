@@ -58,6 +58,7 @@ const EditModal: FC<EditModalProps> = ({ opened, close, editCourse,course,setCou
         credits: course.credits,
       })
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[course])
 
   const onSubmit = (values: Form) => {
