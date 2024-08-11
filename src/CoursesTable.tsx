@@ -1,4 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  Dispatch,
+  FC,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import _ from "underscore";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import Course from "./Course";
@@ -14,10 +21,18 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import EditModal from "./EditModal";
-import { buckets } from "./appSettings";
 
-const CoursesTable = () => {
-  const [courses, setCourses] = useState<Course[]>([]);
+interface CoursesTableProps {
+  courses: Course[];
+  setCourses: Dispatch<React.SetStateAction<Course[]>>;
+  thesisSemester: number | undefined;
+}
+
+const CoursesTable: FC<CoursesTableProps> = ({
+  courses,
+  setCourses,
+  thesisSemester,
+}) => {
   const [selectedCourse, setSelectedCourse] = useState<Course>();
   const [addModalOpened, { open: openAddModal, close: closeAddModal }] =
     useDisclosure(false);
@@ -27,6 +42,7 @@ const CoursesTable = () => {
   useEffect(() => {
     const savedCoursesString = localStorage.getItem("courses");
     if (savedCoursesString) setCourses(JSON.parse(savedCoursesString));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const saveCourses = (courses: Course[]) => {
@@ -83,6 +99,7 @@ const CoursesTable = () => {
       saveCourses(newCourses);
       return newCourses;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const renderCourse = useCallback(
@@ -95,7 +112,7 @@ const CoursesTable = () => {
           <Table.Td>{course.bucket}</Table.Td>
           <Table.Td>{course.isTheory ? "YES" : "NO"}</Table.Td>
           <Table.Td>
-            <Group>
+            <Group style={{ flexWrap: "nowrap" }}>
               <ActionIcon
                 onClick={() => {
                   setSelectedCourse(course);
@@ -125,7 +142,7 @@ const CoursesTable = () => {
         </>
       );
     },
-    [deleteCourse, toggleCourseCounted,openEditModal]
+    [deleteCourse, toggleCourseCounted, openEditModal]
   );
 
   const rows = useMemo(() => {
@@ -146,27 +163,27 @@ const CoursesTable = () => {
         {}
       );
 
+    const semesters = Object.entries(ordered).map(([semester, courses]) => {
+      return [
+        <Table.Tr key={semester}>
+          <Table.Td rowSpan={courses.length}>{semester}</Table.Td>
+          {renderCourse(courses[0])}
+          <Table.Td rowSpan={courses.length}>
+            {courses.reduce(
+              (creds, course) =>
+                course.counted ? creds + course.credits : creds,
+              0
+            )}
+          </Table.Td>
+        </Table.Tr>,
+        ...courses.slice(1).map((course) => {
+          return <Table.Tr key={course.code}>{renderCourse(course)}</Table.Tr>;
+        }),
+      ];
+    });
+
     return [
-      ...Object.entries(ordered).map(([semester, courses]) => {
-        return [
-          <Table.Tr key={semester}>
-            <Table.Td rowSpan={courses.length}>{semester}</Table.Td>
-            {renderCourse(courses[0])}
-            <Table.Td rowSpan={courses.length}>
-              {courses.reduce(
-                (creds, course) =>
-                  course.counted ? creds + course.credits : creds,
-                0
-              )}
-            </Table.Td>
-          </Table.Tr>,
-          ...courses.slice(1).map((course) => {
-            return (
-              <Table.Tr key={course.code}>{renderCourse(course)}</Table.Tr>
-            );
-          }),
-        ];
-      }),
+      ...semesters,
       <Table.Tr key="TOTAL">
         <Table.Td>Total</Table.Td>
         <Table.Td colSpan={7}></Table.Td>
@@ -180,35 +197,6 @@ const CoursesTable = () => {
       </Table.Tr>,
     ];
   }, [courses, renderCourse]);
-
-  const bucketsRows = useMemo(() => {
-    const groupedByBucket = _.groupBy(courses, "bucket");
-    const bucketsArr = buckets
-      .map((bucket) => {
-        return [
-          bucket.value,
-          groupedByBucket[bucket.value]?.reduce(
-            (creds, course) =>
-              course.counted ? creds + course.credits : creds,
-            0
-          ),
-        ];
-      })
-      .sort((a, b) => {
-        if (!a[1] && !b[1]) return 0;
-        if (!a[1]) return 1;
-        if (!b[1]) return -1;
-        if (a[1] >= b[1]) return -1;
-        return 1;
-      });
-
-    return bucketsArr.map((b) => (
-      <Table.Tr key={b[0]}>
-        <Table.Td>{b[0]}</Table.Td>
-        <Table.Td>{b[1] ?? "-"}</Table.Td>
-      </Table.Tr>
-    ));
-  }, [courses]);
 
   return (
     <Stack gap="lg">
@@ -234,9 +222,15 @@ const CoursesTable = () => {
         withRowBorders
         withColumnBorders
         withTableBorder
+        style={{
+          tableLayout: "auto",
+          width: 1,
+          whiteSpace: "nowrap",
+          textAlign: "center",
+        }}
       >
         <Table.Thead>
-          <Table.Tr>
+          <Table.Tr style={{ textAlign: "center" }}>
             <Table.Th>Semester</Table.Th>
             <Table.Th>Code</Table.Th>
             <Table.Th>Name</Table.Th>
@@ -249,25 +243,6 @@ const CoursesTable = () => {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>{rows}</Table.Tbody>
-      </Table>
-
-      <Group justify="space-between">
-        <Title order={3}>Buckets Credits</Title>
-      </Group>
-      <Table
-        striped
-        highlightOnHover
-        withRowBorders
-        withColumnBorders
-        withTableBorder
-      >
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Bucket</Table.Th>
-            <Table.Th>Credits</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>{bucketsRows}</Table.Tbody>
       </Table>
     </Stack>
   );

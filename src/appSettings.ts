@@ -17,4 +17,8 @@ export const buckets = [
       value: "HPC",
       label: "Scientific Computing and High Performance Computing (HPC)",
     },
+    {
+      value: "Languages",
+      label: "Languages",
+    },
   ];
